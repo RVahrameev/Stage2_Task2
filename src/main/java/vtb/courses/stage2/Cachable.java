@@ -5,7 +5,7 @@ public interface Cachable {
     void cachableMethod();
 
     @Setter
-    void setterMethod();
+    void setterMethod(Object object);
 
     void simpleMethod();
 }
