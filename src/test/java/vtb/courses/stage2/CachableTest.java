@@ -13,12 +13,14 @@ public class CachableTest {
         public int sourceData;
         public long calcData;
         @Override
+        @Cache
         public long cachableMethod() {
             calcData = (long) sourceData * (long) sourceData;
             return calcData;
         }
 
         @Override
+        @Setter
         public void setterMethod(Object object){
             sourceData = (Integer)object;
         }

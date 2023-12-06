@@ -20,7 +20,7 @@ import java.util.HashMap;
 public class CacheInvocationHandler<T> implements InvocationHandler {
     private T cachedObject;
     private boolean cachedObjectChanged;
-    private final HashMap<String, Object> lastValues;
+    private final HashMap<Method, Object> lastValues;
 
     public CacheInvocationHandler() {
         lastValues = new HashMap<>();
@@ -30,6 +30,7 @@ public class CacheInvocationHandler<T> implements InvocationHandler {
         this.cachedObject = object;
         // Первоначальное состояние = "Изменён", т.к. первый вызов метода обязательно должено отработать
         this.cachedObjectChanged = true;
+
         return (T) Proxy.newProxyInstance(
                 object.getClass().getClassLoader(),
                 object.getClass().getInterfaces(),
@@ -37,22 +38,25 @@ public class CacheInvocationHandler<T> implements InvocationHandler {
     }
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (method.isAnnotationPresent(Cache.class)) {
-            if (cachedObjectChanged) {
-                cachedObjectChanged = false;
-                Object lastValue = method.invoke(cachedObject, args);
-                lastValues.put(method.getName(), lastValue);
-                return lastValue;
-            } else {
-                System.out.println("Cached object not changed, skip method " + method.getName() + " call!");
-                return lastValues.get(method.getName());
+        try {
+            Method cachedObjectMethod = cachedObject.getClass().getMethod(method.getName(), method.getParameterTypes());
+            if (cachedObjectMethod.isAnnotationPresent(Cache.class)) {
+                if (cachedObjectChanged) {
+                    cachedObjectChanged = false;
+                    Object lastValue = method.invoke(cachedObject, args);
+                    lastValues.put(method, lastValue);
+                    return lastValue;
+                } else {
+                    System.out.println("Cached object not changed, skip method " + method.getName() + " call!");
+                    return lastValues.get(method);
+                }
+            } else if (cachedObjectMethod.isAnnotationPresent(Setter.class)) {
+                System.out.println("Object state start to change!");
+                cachedObjectChanged = true;
             }
-        } else if (method.isAnnotationPresent(Setter.class)) {
-            System.out.println("Object state start to change!");
-            cachedObjectChanged = true;
-        }
+        } catch (NoSuchMethodException e) {}
 
-        // Если дошли до этой точки, то просто вызываем на проксируемом объекте интерфейсный метод
+        // Если дошли до этой точки, то просто вызываем на проксируемом объекте перехваченный метод
         System.out.println("Call native object method " + method.getName());
         return method.invoke(cachedObject, args);
     }
