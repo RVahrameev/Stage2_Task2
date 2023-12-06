@@ -2,7 +2,7 @@ package vtb.courses.stage2;
 
 public interface Cachable {
     @Cache
-    void cachableMethod();
+    long cachableMethod();
 
     @Setter
     void setterMethod(Object object);

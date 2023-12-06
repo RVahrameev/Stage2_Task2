@@ -3,6 +3,7 @@ package vtb.courses.stage2;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
 
 /**
  *  Класс <b>CacheInvocationHandler</b> перехватывает вызовы методов интерфейса T прокси-объекта
@@ -19,6 +20,11 @@ import java.lang.reflect.Proxy;
 public class CacheInvocationHandler<T> implements InvocationHandler {
     private T cachedObject;
     private boolean cachedObjectChanged;
+    private final HashMap<String, Object> lastValues;
+
+    public CacheInvocationHandler() {
+        lastValues = new HashMap<>();
+    }
 
     public T cache(T object) {
         this.cachedObject = object;
@@ -34,9 +40,12 @@ public class CacheInvocationHandler<T> implements InvocationHandler {
         if (method.isAnnotationPresent(Cache.class)) {
             if (cachedObjectChanged) {
                 cachedObjectChanged = false;
+                Object lastValue = method.invoke(cachedObject, args);
+                lastValues.put(method.getName(), lastValue);
+                return lastValue;
             } else {
                 System.out.println("Cached object not changed, skip method " + method.getName() + " call!");
-                return null;
+                return lastValues.get(method.getName());
             }
         } else if (method.isAnnotationPresent(Setter.class)) {
             System.out.println("Object state start to change!");
